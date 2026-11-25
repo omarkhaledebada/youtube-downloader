@@ -25,12 +25,21 @@ def _candidate_names(tool: str) -> list[str]:
 
 def find_executable(tool: str) -> Optional[str]:
     """Look for `tool` (e.g. 'ffmpeg') bundled next to the app, then on PATH."""
-    base_dir = _app_base_dir()
-    search_dirs = [
-        os.path.join(base_dir, "ffmpeg", "bin"),
-        os.path.join(base_dir, "ffmpeg"),
-        base_dir,
-    ]
+    base_dirs = []
+    # PyInstaller (6+) unpacks bundled data into sys._MEIPASS (the "_internal"
+    # folder), not next to the exe -- check there first.
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        base_dirs.append(meipass)
+    base_dirs.append(_app_base_dir())
+
+    search_dirs = []
+    for base_dir in base_dirs:
+        search_dirs += [
+            os.path.join(base_dir, "ffmpeg", "bin"),
+            os.path.join(base_dir, "ffmpeg"),
+            base_dir,
+        ]
 
     for directory in search_dirs:
         for name in _candidate_names(tool):
